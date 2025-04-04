@@ -1,0 +1,101 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
+from django.db.models import CASCADE
+from api.models import Profile
+
+def upload_image_category_path(instance: 'Category', filename: str) -> str:
+    return f'categories/category_{instance.pk}/images/{filename}'
+
+class Category(models.Model):
+    title = models.CharField(max_length=100)
+    image = models.ImageField(null=True, blank=True, upload_to=upload_image_category_path)
+
+    def get_image(self):
+        image = {
+            'src': self.image.url,
+            'alt': self.image.name
+        }
+        return image
+
+
+def upload_image_category_path(instance: 'Subcategory', filename: str) -> str:
+    return f'categories/subcategory_{instance.pk}/images/{filename}'
+
+class Subcategory(models.Model):
+    title = models.CharField(max_length=100)
+    image = models.ImageField(null=True, blank=True, upload_to=upload_image_category_path)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True)
+
+    def get_image(self):
+        image = {
+            'src': self.image.url,
+            'alt': self.image.name
+        }
+        return image
+
+
+class Specification(models.Model):
+    title = models.CharField(max_length=100)
+    value = models.CharField(max_length=50, null=True, blank=True)
+
+
+class Tag(models.Model):
+    title = models.CharField(max_length=100)
+
+
+def upload_preview_product_path(instance: 'Product', filename: str) -> str:
+    return f'products/product_{instance.pk}/images/{filename}'
+
+class Product(models.Model):
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    price = models.DecimalField(default=0, max_digits=8, decimal_places=2)
+    count = models.IntegerField(default=0)
+    date = models.DateTimeField(auto_now_add=True)
+    title = models.CharField(max_length=100)
+    description = models.TextField(max_length=1000, null=True, blank=True)
+    freeDelivery = models.BooleanField(default=True)
+    preview = models.ImageField(null=True, blank=True, upload_to=upload_preview_product_path)
+    tags = models.ManyToManyField(Tag)
+    subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE)
+
+    rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=0.00,
+        validators=[MinValueValidator(0), MaxValueValidator(5)]
+    )
+
+    def get_image(self):
+        images = ProductImage.objects.filter(product_id=self.pk)
+        return [
+            {'src': image.image.url, 'alt': image.image.name} for image in images
+        ]
+
+    def get_rating(self):
+        reviews = Review.objects.filter(product_id=self.pk).values_list(
+            'rate', flat=True
+        )
+        if reviews.count() == 0:
+            rating = 0
+            return rating
+        rating = sum(reviews) / reviews.count()
+        return rating
+
+def upload_product_image_path(instance: 'Product', filename: str) -> str:
+    return f'products/product_{instance.pk}/images/{filename}'
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(
+        Product, on_delete=CASCADE
+    )
+    image = models.ImageField(upload_to=upload_product_image_path)
+
+class Review(models.Model):
+    author = models.ForeignKey(Profile, on_delete=models.CASCADE)
+    email = models.EmailField(default='example@mail.ru')
+    text = models.TextField(max_length=1500)
+    rate = models.PositiveIntegerField(
+        validators=[MaxValueValidator(5)]
+    )
+    date = models.DateTimeField(auto_now_add=True)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
