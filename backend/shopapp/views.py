@@ -161,16 +161,14 @@ class BasketApiView(APIView):
 
         if request.user.is_anonymous:
             anon_user, _ = User.objects.get_or_create(username='anonymous')
-            basket_created = Basket.objects.update_or_create(user=anon_user)
-            basket = Basket.objects.get(user=anon_user)
+            basket, _ = Basket.objects.get_or_create(user=anon_user)
         else:
-            try:
-                basket = request.user.basket
-            except Basket:
-                basket = Basket.objects.create(user=request.user)
+            basket, _ = Basket.objects.get_or_create(user=request.user)
 
         product = Product.objects.get(id=id)
+
         basket_item, created = BasketItems.objects.get_or_create(basket=basket, product=product)
+
         basket_item.quantity = count
         basket_item.save()
 
@@ -184,11 +182,13 @@ class BasketApiView(APIView):
 
         try:
             if request.user.is_anonymous:
-                anon_user = User.objects.get_or_create(username='anonymous')
-                request.user = User.objects.get(id=anon_user.id)
+                anon_user, _ = User.objects.get_or_create(username='anonymous')
+                basket, _ = Basket.objects.get_or_create(user=anon_user)
+            else:
+                basket = request.user.basket
 
-            basket = request.user.basket
             product = Product.objects.get(id=id)
+
             basket_item = BasketItems.objects.get(basket=basket, product=product)
 
             if basket_item.quantity > count:
@@ -203,4 +203,8 @@ class BasketApiView(APIView):
             return Response(serializer.data)
 
         except Basket.DoesNotExist:
-            return Response('Товары в корзине не найдены', status=404)
+            return Response('Корзина не найдена', status=404)
+        except Product.DoesNotExist:
+            return Response('Продукт не найден', status=404)
+        except BasketItems.DoesNotExist:
+            return Response('Товар не найден в корзине', status=404)

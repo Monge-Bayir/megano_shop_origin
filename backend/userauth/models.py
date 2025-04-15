@@ -6,6 +6,7 @@ def upload_avatar_path(instance: 'Profile', filename: str) -> str:
     return f'profiles/profile_{instance.pk}/avatar/{filename}'
 
 class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     fullName = models.CharField(max_length=100)
     username = models.CharField(max_length=100)
     phone = models.CharField(max_length=12)

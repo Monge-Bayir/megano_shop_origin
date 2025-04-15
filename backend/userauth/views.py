@@ -2,7 +2,8 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import render
+from django.core.serializers import serialize
+from django.shortcuts import render, get_object_or_404
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.models import User
@@ -15,6 +16,8 @@ from .models import Profile
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
+from .serializers import ProfileSerializers
 
 
 class SignInView(APIView):
@@ -75,6 +78,18 @@ class SignUpView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
+
+class ProfileApiView(APIView):
+    def get(self, request):
+        profile = get_object_or_404(Profile, user=request.user)
+        serializer = ProfileSerializers(profile)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = ProfileSerializers(data=request.data)
+        if serializer.is_valid():
+            return Response(serializer.data, status=201)
+        return Response(status=400)
 
 
 
