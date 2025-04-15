@@ -1,0 +1,12 @@
+from django.urls import path
+
+from .models import Profile
+from .views import SignUpView, SignOutView, SignInView
+
+app_name = 'userauth'
+
+urlpatterns = [
+    path('sign-in', SignInView.as_view(), name='sign-in'),
+    path('sign-up', SignUpView.as_view(), name='sign-up'),
+    path('sign-out', SignOutView.as_view(), name='sign-out'),
+]

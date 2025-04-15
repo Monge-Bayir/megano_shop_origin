@@ -1,7 +1,8 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import CASCADE
-from api.models import Profile
+from userauth.models import Profile
+from django.contrib.auth.models import User
 
 def upload_image_category_path(instance: 'Category', filename: str) -> str:
     return f'categories/category_{instance.pk}/images/{filename}'
@@ -57,6 +58,7 @@ class Product(models.Model):
     preview = models.ImageField(null=True, blank=True, upload_to=upload_preview_product_path)
     tags = models.ManyToManyField(Tag)
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE)
+    specifications = models.ManyToManyField(Specification, blank=True)
 
     rating = models.DecimalField(
         max_digits=3,
@@ -99,3 +101,14 @@ class Review(models.Model):
     )
     date = models.DateTimeField(auto_now_add=True)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
+
+
+class Basket(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class BasketItems(models.Model):
+    basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)

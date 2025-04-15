@@ -1,5 +1,120 @@
 from rest_framework import serializers
-from .models import Product, Review, Tag
+from .models import Product, Category, Subcategory, Tag, ProductImage, Review, Specification, Basket, BasketItems
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'title', 'image']
+
+    def get_image(self, obj):
+        return obj.get_image()
+
+
+class SubcategorySerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Subcategory
+        fields = ['id', 'title', 'image']
+
+    def get_image(self, obj):
+        return obj.get_image()
+
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['title']
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['image']
+
+    def to_representation(self, instance):
+        return {
+            'src': instance.image.url,
+            'alt': instance.image.name
+        }
+
+
+class SpecificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Specification
+        fields = ['title', 'value']
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.StringRelatedField()  # если хочешь выводить имя юзера
+    class Meta:
+        model = Review
+        fields = ['author', 'email', 'text', 'rate', 'date']
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    category = CategorySerializer()
+    subcategory = SubcategorySerializer()
+    tags = TagSerializer(many=True)
+    images = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
+    specifications = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'category', 'subcategory', 'price', 'count', 'date', 'title',
+            'description', 'freeDelivery', 'images', 'tags', 'reviews',
+            'specifications', 'rating'
+        ]
+
+    def get_images(self, obj):
+        return obj.get_image()
+
+    def get_reviews(self, obj):
+        reviews = Review.objects.filter(product=obj)
+        return ReviewSerializer(reviews, many=True).data
+
+    def get_specifications(self, obj):
+        # Предполагаем, что у Product есть отношение ManyToMany к Specification
+        if hasattr(obj, 'specifications'):
+            return SpecificationSerializer(obj.specifications.all(), many=True).data
+        return []
+
+    def get_rating(self, obj):
+        return obj.get_rating()
+
+
+class ProductShortSerializer(serializers.ModelSerializer):
+    category = CategorySerializer()
+    subcategory = SubcategorySerializer()
+    tags = TagSerializer(many=True)
+    images = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
+    rating = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'category', 'subcategory', 'price', 'count', 'date', 'title',
+            'description', 'freeDelivery', 'images', 'tags', 'reviews',
+             'rating'
+        ]
+
+    def get_images(self, obj):
+        return obj.get_image()
+
+    def get_reviews(self, obj):
+        reviews = Review.objects.filter(product=obj)
+        return ReviewSerializer(reviews, many=True).data
+
+    def get_rating(self, obj):
+        return obj.get_rating()
+
 
 class CatalogListSerializer(serializers.Serializer):
     class Meta:
@@ -33,3 +148,16 @@ class BannerListSerializer(CatalogListSerializer):
         tags = instance.tags.all()
         rep['tags'] = [tag.title for tag in tags]
         return rep
+
+
+class BasketItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BasketItems
+        fields = (
+            'product', 'count'
+        )
+
+    def to_representation(self, instance):
+        data = ProductShortSerializer(instance.product).data
+        data['count'] = instance.quantity
+        return data

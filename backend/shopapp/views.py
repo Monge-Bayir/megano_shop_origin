@@ -1,14 +1,18 @@
+from itertools import product
+
 from django.core.paginator import Paginator
+from django.core.serializers import serialize
 from django.http import JsonResponse
 from django.shortcuts import render
-from rest_framework.generics import GenericAPIView, ListAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView, get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Product
+from .models import Product, BasketItems
 from django.conf import settings
 
-from .models import Category, Subcategory
-from .serializers import BannerListSerializer, CatalogListSerializer
+from .models import Category, Subcategory, Basket
+from .serializers import BannerListSerializer, CatalogListSerializer, ProductSerializer, BasketItemSerializer
+from django.contrib.auth.models import User
 
 
 class CategoryView(GenericAPIView):
@@ -136,3 +140,67 @@ class LimitedListApiView(ListAPIView):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class ProductDetailApiView(APIView):
+    def get(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        serializer = ProductSerializer(product)
+        return Response(serializer.data)
+
+
+class BasketApiView(APIView):
+    def get(self, request):
+        queryset = BasketItems.objects.filter(basket__user=request.user)
+        serializer = BasketItemSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        id = request.data['id']
+        count = request.data['count']
+
+        if request.user.is_anonymous:
+            anon_user, _ = User.objects.get_or_create(username='anonymous')
+            basket_created = Basket.objects.update_or_create(user=anon_user)
+            basket = Basket.objects.get(user=anon_user)
+        else:
+            try:
+                basket = request.user.basket
+            except Basket:
+                basket = Basket.objects.create(user=request.user)
+
+        product = Product.objects.get(id=id)
+        basket_item, created = BasketItems.objects.get_or_create(basket=basket, product=product)
+        basket_item.quantity = count
+        basket_item.save()
+
+        basket_items = BasketItems.objects.filter(basket=basket)
+        serializer = BasketItemSerializer(basket_items, many=True)
+        return Response(serializer.data)
+
+    def delete(self, request):
+        id = request.data['id']
+        count = request.data['count']
+
+        try:
+            if request.user.is_anonymous:
+                anon_user = User.objects.get_or_create(username='anonymous')
+                request.user = User.objects.get(id=anon_user.id)
+
+            basket = request.user.basket
+            product = Product.objects.get(id=id)
+            basket_item = BasketItems.objects.get(basket=basket, product=product)
+
+            if basket_item.quantity > count:
+                basket_item.quantity -= count
+                basket_item.save()
+            else:
+                basket_item.delete()
+
+            basket_items = BasketItems.objects.filter(basket=basket)
+            serializer = BasketItemSerializer(basket_items, many=True)
+
+            return Response(serializer.data)
+
+        except Basket.DoesNotExist:
+            return Response('Товары в корзине не найдены', status=404)
