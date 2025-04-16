@@ -10,8 +10,9 @@ from rest_framework.views import APIView
 from .models import Product, BasketItems
 from django.conf import settings
 
-from .models import Category, Subcategory, Basket
-from .serializers import BannerListSerializer, CatalogListSerializer, ProductSerializer, BasketItemSerializer
+from .models import Category, Subcategory, Basket, Order, DeliveryCost
+from userauth.models import Profile
+from .serializers import BannerListSerializer, CatalogListSerializer, ProductSerializer, BasketItemSerializer, OrderSerializers
 from django.contrib.auth.models import User
 
 
@@ -208,3 +209,43 @@ class BasketApiView(APIView):
             return Response('Продукт не найден', status=404)
         except BasketItems.DoesNotExist:
             return Response('Товар не найден в корзине', status=404)
+
+
+class CreateOrderApiView(APIView):
+    def post(self, request):
+        try:
+            basket = request.user.basket
+            # profile = User.objects.get(user=request.user)
+            basket_items = BasketItems.objects.filter(basket__user=request.user)
+            total_cost = 0
+            order = Order.objects.create(
+                fullName=request.user.username,
+                basket=basket
+            )
+            for item in basket_items:
+                product = Product.objects.get(pk=item.product.pk)
+                product.count = item.quantity
+                total_cost += item.product.price * item.quantity
+                product.save()
+
+            delivery_price = DeliveryCost.objects.get(id=1)
+            if total_cost > delivery_price.delivery_free_min:
+                order.totalCost = total_cost
+            else:
+                order.totalCost = total_cost + delivery_price.delivery_cost
+            order.save()
+
+            response_data = {'orderId': order.pk}
+            return JsonResponse(response_data)
+        except Basket.DoesNotExist:
+            return JsonResponse({'error': 'У данного пользователя ничего в корзине нет'})
+
+
+class OrderDetailApiView(APIView):
+    def get(self, request, pk):
+        order = Order.objects.get(pk=pk)
+        serializer = OrderSerializers(order)
+        return JsonResponse(serializer.data)
+
+    def post(self, request, pk):
+        pass

@@ -116,11 +116,13 @@ class BasketItems(models.Model):
 
 class Order(models.Model):
     delivery_choice = (
-        ('express'), ('delivery')
+        ('express', 'Экспресс-доставка'),
+        ('delivery', 'Обычная доставка'),
     )
 
     payment_choice = (
-        ('online'), ('online_any')
+        ('online', 'Онлайн оплата'),
+        ('inCash', 'Наличными'),
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -134,3 +136,12 @@ class Order(models.Model):
     city = models.CharField(max_length=100)
     address = models.CharField(max_length=100)
     products = models.ManyToManyField(Product)
+    basket = models.ForeignKey(Basket, on_delete=models.CASCADE, default=None)
+    basket_items = models.ForeignKey(BasketItems, on_delete=models.CASCADE)
+    payment_error = models.CharField(max_length=200, blank=True)
+
+
+class DeliveryCost(models.Model):
+    delivery_cost = models.DecimalField(default=0, max_digits=8, decimal_places=2)
+    delivery_express_cost = models.DecimalField(default=0, max_digits=8, decimal_places=2)
+    delivery_free_min = models.DecimalField(default=0, max_digits=8, decimal_places=2) #наименьшая сумма для бесплатной доставки

@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import CategoryView, ProductListView, BannerListApiView, PopularListApiView, LimitedListApiView, \
-    ProductDetailApiView, BasketApiView
+    ProductDetailApiView, BasketApiView, CreateOrderApiView, OrderDetailApiView
 
 app_name = 'shopapp'
 
@@ -12,5 +12,7 @@ urlpatterns = [
     path('products/limited', LimitedListApiView.as_view()),
     path('products/popular', PopularListApiView.as_view()),
     path('product/<int:pk>', ProductDetailApiView.as_view()),
-    path('basket', BasketApiView.as_view())
+    path('basket', BasketApiView.as_view()),
+    path('orders', CreateOrderApiView.as_view()),
+    path('order/<int:pk>', OrderDetailApiView.as_view())
 ]

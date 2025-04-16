@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Category, Subcategory, Tag, ProductImage, Review, Specification, Basket, BasketItems
+from .models import Product, Category, Subcategory, Tag, ProductImage, Review, Specification, Basket, BasketItems, Order
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -161,3 +161,61 @@ class BasketItemSerializer(serializers.ModelSerializer):
         data = ProductShortSerializer(instance.product).data
         data['count'] = instance.quantity
         return data
+
+
+from rest_framework import serializers
+from .models import Order, Product
+
+class OrderSerializers(serializers.ModelSerializer):
+    products = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        many=True
+    )
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'created_at', 'fullName', 'email', 'phone',
+            'deliveryType', 'paymentType', 'totalCost', 'status',
+            'city', 'address', 'products', 'basket'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+
+# class OrderSerializers(serializers.ModelSerializer):
+#     class Meta:
+#         model = Order
+#         fields = '__all__'
+#
+#     def to_representation(self, instance):
+#         profile = instance.fullName
+#         products = instance.products.all()
+#
+#         data = {
+#             'id': instance.id,
+#             'created_at': instance.created_at,
+#             'fullName': profile,
+#             'email': instance.email,
+#             'phone': instance.phone,
+#             'deliveryType': instance.deliveryType,
+#             'paymentType': instance.paymentType,
+#             'totalCost': instance.totalCost,
+#             'status': instance.status,
+#             'city': instance.city,
+#             'address': instance.address,
+#             'products': [{
+#                 'id': item.pk,
+#                 'category': item.category.pk,
+#                 'price': item.price,
+#                 'count': item.count,
+#                 'data': item.date.strftime('%Y.%m.%d %H:%M'),
+#                 'title': item.title,
+#                 'description': item.description,
+#                 'freeDelivery': item.freeDelivery,
+#                 'images': item.get_image()
+#             }
+#                 for item in products]
+#         }
+#
+#         return data
