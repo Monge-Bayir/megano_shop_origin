@@ -164,13 +164,10 @@ class BasketItemSerializer(serializers.ModelSerializer):
 
 
 from rest_framework import serializers
-from .models import Order, Product
+from .models import Order, BasketItems
 
 class OrderSerializers(serializers.ModelSerializer):
-    products = serializers.PrimaryKeyRelatedField(
-        queryset=Product.objects.all(),
-        many=True
-    )
+    products = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Order
@@ -179,43 +176,32 @@ class OrderSerializers(serializers.ModelSerializer):
             'deliveryType', 'paymentType', 'totalCost', 'status',
             'city', 'address', 'products', 'basket'
         ]
-        read_only_fields = ['id', 'created_at']
 
+    def get_products(self, obj):
+        basket_items = BasketItems.objects.filter(basket=obj.basket)
+        return [
+            {
+                'id': item.product.id,
+                'category': item.product.category.id if item.product.category else None,
+                'price': item.product.price,
+                'count': item.product.count,
+                'date': item.product.date.strftime('%Y.%m.%d %H:%M'),
+                'title': item.product.title,
+                'description': item.product.description,
+                'freeDelivery': item.product.freeDelivery,
+                'images': item.product.get_image(),
+                'tags': [tag.title for tag in item.product.tags.all()],
+                'rating': float(item.product.get_rating())
+            }
+            for item in basket_items
+        ]
 
+    def create(self, validated_data):
+        basket = validated_data.get('basket')
+        order = Order.objects.create(**validated_data)
 
-# class OrderSerializers(serializers.ModelSerializer):
-#     class Meta:
-#         model = Order
-#         fields = '__all__'
-#
-#     def to_representation(self, instance):
-#         profile = instance.fullName
-#         products = instance.products.all()
-#
-#         data = {
-#             'id': instance.id,
-#             'created_at': instance.created_at,
-#             'fullName': profile,
-#             'email': instance.email,
-#             'phone': instance.phone,
-#             'deliveryType': instance.deliveryType,
-#             'paymentType': instance.paymentType,
-#             'totalCost': instance.totalCost,
-#             'status': instance.status,
-#             'city': instance.city,
-#             'address': instance.address,
-#             'products': [{
-#                 'id': item.pk,
-#                 'category': item.category.pk,
-#                 'price': item.price,
-#                 'count': item.count,
-#                 'data': item.date.strftime('%Y.%m.%d %H:%M'),
-#                 'title': item.title,
-#                 'description': item.description,
-#                 'freeDelivery': item.freeDelivery,
-#                 'images': item.get_image()
-#             }
-#                 for item in products]
-#         }
-#
-#         return data
+        basket_items = BasketItems.objects.filter(basket=basket)
+        for item in basket_items:
+            order.products.add(item.product)
+
+        return order

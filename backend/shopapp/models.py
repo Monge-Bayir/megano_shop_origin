@@ -137,7 +137,6 @@ class Order(models.Model):
     address = models.CharField(max_length=100)
     products = models.ManyToManyField(Product)
     basket = models.ForeignKey(Basket, on_delete=models.CASCADE, default=None)
-    basket_items = models.ForeignKey(BasketItems, on_delete=models.CASCADE)
     payment_error = models.CharField(max_length=200, blank=True)
 
 

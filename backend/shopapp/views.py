@@ -248,4 +248,24 @@ class OrderDetailApiView(APIView):
         return JsonResponse(serializer.data)
 
     def post(self, request, pk):
-        pass
+        order = get_object_or_404(Order, id=pk)
+        delivery_type = request.data['deliveryType']
+        payment_type = request.data['paymentType']
+        city = request.data['city']
+        address = request.data['address']
+        status_order = 'accepted'
+
+        if delivery_type == 'express':
+            delivery_price = DeliveryCost.objects.get(id=1)
+            order.totalCost += delivery_price.delivery_express_cost
+            order.save()
+
+        order.deliveryType = delivery_type
+        order.paymentType = payment_type
+        order.city = city
+        order.address = address
+        order.status = status_order
+        order.save()
+
+        response_data = {'orderId': order.pk}
+        return Response(response_data, status=200)
