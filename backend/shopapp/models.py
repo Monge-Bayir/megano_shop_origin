@@ -112,3 +112,25 @@ class BasketItems(models.Model):
     basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+
+
+class Order(models.Model):
+    delivery_choice = (
+        ('express'), ('delivery')
+    )
+
+    payment_choice = (
+        ('online'), ('online_any')
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    fullName = models.CharField(max_length=100)
+    email = models.EmailField(default='example@mail.ru')
+    phone = models.CharField(max_length=13)
+    deliveryType = models.CharField(max_length=100, choices=delivery_choice)
+    paymentType = models.CharField(max_length=20, choices=payment_choice)
+    totalCost = models.DecimalField(default=0, max_digits=8, decimal_places=2)
+    status = models.CharField(max_length=100, default='Processing...')
+    city = models.CharField(max_length=100)
+    address = models.CharField(max_length=100)
+    products = models.ManyToManyField(Product)
