@@ -4,15 +4,19 @@ from django.core.paginator import Paginator
 from django.core.serializers import serialize
 from django.http import JsonResponse
 from django.shortcuts import render
+from rest_framework import status
 from rest_framework.generics import GenericAPIView, ListAPIView, get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Product, BasketItems
+from .models import Product, BasketItems, Payment, Tag, Review
 from django.conf import settings
+from django.utils.timezone import now
 
-from .models import Category, Subcategory, Basket, Order, DeliveryCost
+from .models import Category, Subcategory, Basket, Order, DeliveryCost, SaleItem
 from userauth.models import Profile
-from .serializers import BannerListSerializer, CatalogListSerializer, ProductSerializer, BasketItemSerializer, OrderSerializers
+from .serializers import BannerListSerializer, CatalogListSerializer, ProductSerializer, BasketItemSerializer, \
+    OrderSerializers, TagSerializer, SaleItemSerializer, ReviewSerializer
 from django.contrib.auth.models import User
 
 
@@ -269,3 +273,69 @@ class OrderDetailApiView(APIView):
 
         response_data = {'orderId': order.pk}
         return Response(response_data, status=200)
+
+
+class TagApiView(APIView):
+    def get(self, request):
+        queryset = Tag.objects.all()
+        serializer = TagSerializer(queryset, many=True)
+        return Response(serializer.data, status=200)
+
+
+class SaleItemListView(APIView):
+    def get(self, request):
+        current_time = now()
+        sale_items = SaleItem.objects.filter(
+            dateFrom__lte=current_time,
+            dateTo__gte=current_time
+        ).order_by('-dateFrom')
+        page_number = int(request.GET.get('currentPage', 1))
+        limit = 2
+        paginator = Paginator(sale_items, limit)
+        serializer = SaleItemSerializer(sale_items, many=True)
+        data = ({
+            'items': serializer.data,
+            'currentPage': page_number,
+            'lastPage': paginator.num_pages
+        })
+
+        return Response(data)
+
+
+class ReviewCreateAPIView(APIView):
+    def get(self, request, product_id):
+        try:
+            product = Product.objects.get(pk=product_id)
+        except Product.DoesNotExist:
+            return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        reviews = Review.objects.filter(product=product).order_by('-date')
+        serializer = ReviewSerializer(reviews, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, id):
+        try:
+            product = Product.objects.get(pk=id)
+        except Product.DoesNotExist:
+            return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            author_name = serializer.validated_data['author']
+
+            profile = Profile.objects.filter(fullName=author_name).first()
+            if not profile:
+                profile = Profile.objects.create(fullName=author_name)
+
+            Review.objects.create(
+                author=profile,
+                email=serializer.validated_data['email'],
+                text=serializer.validated_data['text'],
+                rate=serializer.validated_data['rate'],
+                product=product
+            )
+
+            return Response({'detail': 'Review created'}, status=status.HTTP_201_CREATED)
+
+        return Response({'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+

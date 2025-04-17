@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Product, Category, Subcategory, Tag, ProductImage, Review, Specification, Basket, BasketItems, Order
+from .models import Product, Category, Subcategory, Tag, ProductImage, Review, Specification, Basket, BasketItems, Order, SaleItem
+from django.contrib.auth.models import User
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -163,9 +164,6 @@ class BasketItemSerializer(serializers.ModelSerializer):
         return data
 
 
-from rest_framework import serializers
-from .models import Order, BasketItems
-
 class OrderSerializers(serializers.ModelSerializer):
     products = serializers.SerializerMethodField(read_only=True)
 
@@ -205,3 +203,41 @@ class OrderSerializers(serializers.ModelSerializer):
             order.products.add(item.product)
 
         return order
+
+
+class Tags(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'title']
+
+
+class SaleItemSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='pk')
+    salePrice = serializers.DecimalField(max_digits=8, decimal_places=2)
+    dateFrom = serializers.SerializerMethodField()
+    dateTo = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SaleItem
+        fields = ['id', 'price', 'salePrice', 'dateFrom', 'dateTo', 'title', 'images']
+
+    def get_dateFrom(self, obj):
+        return obj.dateFrom.strftime('%m-%d') if obj.dateFrom else None
+
+    def get_dateTo(self, obj):
+        return obj.dateTo.strftime('%m-%d') if obj.dateTo else None
+
+    def get_images(self, obj):
+        images = ProductImage.objects.filter(product=obj.product)
+        return ProductImageSerializer(images, many=True).data
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.CharField()
+
+    class Meta:
+        model = Review
+        fields = ['author', 'email', 'text', 'rate', 'date']
+
+
