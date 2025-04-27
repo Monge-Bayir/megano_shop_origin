@@ -60,6 +60,11 @@ class Product(models.Model):
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE)
     specifications = models.ManyToManyField(Specification, blank=True)
 
+    sale = models.BooleanField(default=False)
+    salePrice = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    dateFrom = models.DateField(null=True, blank=True)
+    dateTo = models.DateField(null=True, blank=True)
+
     rating = models.DecimalField(
         max_digits=3,
         decimal_places=2,
@@ -165,7 +170,7 @@ class SaleItem(models.Model):
 
 
 def upload_product_image_path(instance: 'Product', filename: str) -> str:
-    return f'products_sale/product_{instance.pk}/images/{filename}'
+    return f'products/product_{instance.product.pk}/images/{filename}'
 
 class ProductImage(models.Model):
     product = models.ForeignKey(

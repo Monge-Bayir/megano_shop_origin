@@ -18,7 +18,7 @@ from .models import (
 )
 from .serializers import (
     BannerListSerializer, CatalogListSerializer, ProductSerializer, BasketItemSerializer,
-    OrderSerializers, TagSerializer, SaleItemSerializer, ReviewSerializer
+    OrderSerializers, TagSerializer, SaleItemSerializer, ReviewSerializer, ProductSaleSerializer
 )
 from userauth.models import Profile
 from django.contrib.auth.models import User
@@ -226,18 +226,32 @@ class TagApiView(APIView):
         return Response(serializer.data)
 
 
-class SaleItemListView(APIView):
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+import math
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_query_param = 'currentPage'
+
+    def get_paginated_response(self, data):
+        total_pages = math.ceil(self.page.paginator.count / self.page_size)
+        return Response({
+            'items': data,
+            'currentPage': self.page.number,
+            'lastPage': total_pages
+        })
+
+
+
+class ProductSaleAPIView(APIView):
     def get(self, request):
-        current_time = now()
-        sale_items = SaleItem.objects.select_related('product').filter(
-            dateFrom__lte=current_time,
-            dateTo__gte=current_time
-        ).order_by('-dateFrom')
-        page_number = int(request.GET.get('currentPage', 1))
-        limit = 2
-        paginator = Paginator(sale_items, limit)
-        serializer = SaleItemSerializer(sale_items, many=True)
-        return Response({'items': serializer.data, 'currentPage': page_number, 'lastPage': paginator.num_pages})
+        sale_products = Product.objects.filter(sale=True).order_by('-id')
+        paginator = CustomPagination()
+        result_page = paginator.paginate_queryset(sale_products, request)
+        serializer = ProductSaleSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
 
 
 class ReviewCreateAPIView(APIView):
