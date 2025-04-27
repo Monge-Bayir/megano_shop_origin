@@ -19,7 +19,7 @@ from .serializers import (
 )
 from userauth.models import Profile
 
-
+##
 class CategoryView(GenericAPIView):
     def get(self, request):
         categories = Category.objects.prefetch_related('subcategory_set').all()
