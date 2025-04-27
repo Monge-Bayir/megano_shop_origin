@@ -1,27 +1,23 @@
 import datetime
-from itertools import product
-
 from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render
-from django.utils.timezone import now
-from django.conf import settings
 from rest_framework import status
 from rest_framework.generics import GenericAPIView, ListAPIView, get_object_or_404
+from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from rest_framework.views import APIView
+import math
+import uuid
 
 from .models import (
     Product, BasketItems, Payment, Tag, Review,
-    Category, Subcategory, Basket, Order, DeliveryCost, SaleItem
+    Category, Basket, Order, DeliveryCost
 )
 from .serializers import (
-    BannerListSerializer, CatalogListSerializer, ProductSerializer, BasketItemSerializer,
-    OrderSerializers, TagSerializer, SaleItemSerializer, ReviewSerializer, ProductSaleSerializer
+    BannerListSerializer, ProductSerializer, BasketItemSerializer,
+    OrderSerializers, TagSerializer, ReviewSerializer
 )
 from userauth.models import Profile
-from django.contrib.auth.models import User
 
 
 class CategoryView(GenericAPIView):
@@ -127,23 +123,8 @@ class ProductDetailApiView(APIView):
         return Response(serializer.data)
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Basket, BasketItems, Product
-from .serializers import BasketItemSerializer
-import uuid
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Basket, BasketItems, Product
-from .serializers import BasketItemSerializer
-import uuid
-
-
 class BasketApiView(APIView):
-
     def get(self, request):
-        # Для неавторизованных пользователей используем сессию
         if request.user.is_anonymous:
             basket_id = request.session.get('basket_id')
             if not basket_id:
@@ -161,7 +142,6 @@ class BasketApiView(APIView):
         id = request.data['id']
         count = request.data['count']
 
-        # Для неавторизованных пользователей используем сессию
         if request.user.is_anonymous:
             basket_id = request.session.get('basket_id')
             if not basket_id:
@@ -187,7 +167,6 @@ class BasketApiView(APIView):
         id = request.data['id']
         count = request.data['count']
 
-        # Для неавторизованных пользователей используем сессию
         if request.user.is_anonymous:
             basket_id = request.session.get('basket_id')
             if not basket_id:
@@ -218,14 +197,9 @@ class BasketApiView(APIView):
             return Response('Товар не найден в корзине', status=404)
 
 
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from .models import Basket, BasketItems, Order, DeliveryCost, Product
-
 class CreateOrderApiView(APIView):
     def post(self, request):
         try:
-            # Для анонимных пользователей используем сессию
             if request.user.is_anonymous:
                 basket_id = request.session.get('basket_id')
                 if not basket_id:
@@ -239,14 +213,12 @@ class CreateOrderApiView(APIView):
             total_cost = 0
             order = Order.objects.create(fullName=request.user.username if not request.user.is_anonymous else 'Guest', basket=basket)
 
-            # Рассчитываем общую стоимость заказа
             for item in basket_items:
                 product = item.product
                 product.count = item.quantity
                 total_cost += product.price * item.quantity
                 product.save()
 
-            # Рассчитываем стоимость доставки
             delivery_price = DeliveryCost.objects.only('delivery_cost', 'delivery_free_min').get(id=1)
             order.totalCost = total_cost if total_cost > delivery_price.delivery_free_min else total_cost + delivery_price.delivery_cost
             order.save()
@@ -295,10 +267,6 @@ class TagApiView(APIView):
         serializer = TagSerializer(queryset, many=True)
         return Response(serializer.data)
 
-
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
-import math
 
 class CustomPagination(PageNumberPagination):
     page_size = 10

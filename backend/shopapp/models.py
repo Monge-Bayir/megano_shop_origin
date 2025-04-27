@@ -2,6 +2,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import CASCADE
 from userauth.models import Profile
+import uuid
 from django.contrib.auth.models import User
 
 def upload_image_category_path(instance: 'Category', filename: str) -> str:
@@ -100,10 +101,6 @@ class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
 
 
-from django.db import models
-import uuid
-from django.contrib.auth.models import User
-
 class Basket(models.Model):
     user = models.OneToOneField(User, null=True, blank=True, on_delete=models.CASCADE)
     session_id = models.CharField(max_length=255, null=True, blank=True)
@@ -168,25 +165,6 @@ class Payment(models.Model):
     card_number = models.CharField(max_length=16)
     validity_period = models.CharField(max_length=20)
     success = models.BooleanField(default=False)
-
-
-def upload_image_saleproduct_path(instance: 'SaleItem', filename: str):
-    return f'saleproducts/product_{instance.pk}/image/{filename}'
-
-class SaleItem(models.Model):
-    price = models.DecimalField(default=0, max_digits=8, decimal_places=2)
-    salePrice = models.DecimalField(default=0, max_digits=8, decimal_places=2)
-    dateFrom = models.DateTimeField(null=True, blank=True)
-    dateTo = models.DateTimeField(null=True, blank=True)
-    title = models.CharField(max_length=100)
-    preview = models.ImageField(null=True, blank=True, upload_to=upload_image_saleproduct_path)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-
-    def get_image(self):
-        images = ProductImage.objects.filter(product_id=self.pk)
-        return [
-            {'src': image.image.url, 'alt': image.image.name} for image in images
-        ]
 
 
 def upload_product_image_path(instance: 'Product', filename: str) -> str:

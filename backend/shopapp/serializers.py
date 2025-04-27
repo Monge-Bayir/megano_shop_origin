@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Category, Subcategory, Tag, ProductImage, Review, Specification, Basket, BasketItems, Order, SaleItem
+from .models import Product, Category, Subcategory, Tag, ProductImage, Review, Specification, BasketItems, Order
 from django.contrib.auth.models import User
 
 
@@ -81,7 +81,6 @@ class ProductSerializer(serializers.ModelSerializer):
         return ReviewSerializer(reviews, many=True).data
 
     def get_specifications(self, obj):
-        # Предполагаем, что у Product есть отношение ManyToMany к Specification
         if hasattr(obj, 'specifications'):
             return SpecificationSerializer(obj.specifications.all(), many=True).data
         return []
@@ -211,28 +210,6 @@ class Tags(serializers.ModelSerializer):
         fields = ['id', 'title']
 
 
-class SaleItemSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='pk')
-    salePrice = serializers.DecimalField(max_digits=8, decimal_places=2)
-    dateFrom = serializers.SerializerMethodField()
-    dateTo = serializers.SerializerMethodField()
-    images = serializers.SerializerMethodField()
-
-    class Meta:
-        model = SaleItem
-        fields = ['id', 'price', 'salePrice', 'dateFrom', 'dateTo', 'title', 'images']
-
-    def get_dateFrom(self, obj):
-        return obj.dateFrom.strftime('%m-%d') if obj.dateFrom else None
-
-    def get_dateTo(self, obj):
-        return obj.dateTo.strftime('%m-%d') if obj.dateTo else None
-
-    def get_images(self, obj):
-        images = ProductImage.objects.filter(product=obj.product)
-        return ProductImageSerializer(images, many=True).data
-
-
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.CharField()
 
@@ -240,28 +217,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         model = Review
         fields = ['author', 'email', 'text', 'rate', 'date']
 
-
-from rest_framework import serializers
-from .models import Product
-
-class ProductSaleSerializer(serializers.ModelSerializer):
-    images = serializers.SerializerMethodField()
-    dateFrom = serializers.SerializerMethodField()
-    dateTo = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Product
-        fields = ['id', 'price', 'salePrice', 'dateFrom', 'dateTo', 'title', 'images']
-
-    def get_images(self, obj):
-        # Используем метод модели get_image(), чтобы вернуть список изображений
-        return obj.get_image()
-
-    def get_dateFrom(self, obj):
-        return obj.dateFrom.strftime('%m-%d') if obj.dateFrom else None
-
-    def get_dateTo(self, obj):
-        return obj.dateTo.strftime('%m-%d') if obj.dateTo else None
 
 
 

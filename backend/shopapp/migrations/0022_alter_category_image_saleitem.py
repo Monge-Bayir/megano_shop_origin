@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('dateFrom', models.DateTimeField(blank=True, null=True)),
                 ('dateTo', models.DateTimeField(blank=True, null=True)),
                 ('title', models.CharField(max_length=100)),
-                ('preview', models.ImageField(blank=True, null=True, upload_to=shopapp.models.upload_image_saleproduct_path)),
+                ('preview', models.ImageField(blank=True, null=True, upload_to=shopapp.models.upload_image_category_path)),
                 ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='shopapp.product')),
             ],
         ),

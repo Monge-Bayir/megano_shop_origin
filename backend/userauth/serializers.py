@@ -20,11 +20,6 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
             "alt": "No avatar"
         }
 
-from rest_framework import serializers
-from .models import Profile
-
-from rest_framework import serializers
-from .models import Profile
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(required=False)  # Это изображение, и оно может быть необязательным
