@@ -100,15 +100,35 @@ class Review(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
 
 
+from django.db import models
+import uuid
+from django.contrib.auth.models import User
+
 class Basket(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, null=True, blank=True, on_delete=models.CASCADE)
+    session_id = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        if self.user:
+            return f"Basket for {self.user}"
+        else:
+            return f"Basket for session {self.session_id}"
+
+    def save(self, *args, **kwargs):
+        if not self.user and not self.session_id:
+            self.session_id = str(uuid.uuid4())  # Генерация уникального ID для сессии
+        super().save(*args, **kwargs)
 
 
 class BasketItems(models.Model):
     basket = models.ForeignKey(Basket, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey('Product', on_delete=models.CASCADE)  # Предполагается, что у вас есть модель Product
     quantity = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.product.name} x {self.quantity}"
+
 
 
 class Order(models.Model):

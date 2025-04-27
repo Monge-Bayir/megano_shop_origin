@@ -127,31 +127,77 @@ class ProductDetailApiView(APIView):
         return Response(serializer.data)
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Basket, BasketItems, Product
+from .serializers import BasketItemSerializer
+import uuid
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Basket, BasketItems, Product
+from .serializers import BasketItemSerializer
+import uuid
+
+
 class BasketApiView(APIView):
+
     def get(self, request):
-        queryset = BasketItems.objects.select_related('basket', 'product').filter(basket__user=request.user)
+        # Для неавторизованных пользователей используем сессию
+        if request.user.is_anonymous:
+            basket_id = request.session.get('basket_id')
+            if not basket_id:
+                basket_id = str(uuid.uuid4())  # Генерируем уникальный ID корзины
+                request.session['basket_id'] = basket_id
+            basket, _ = Basket.objects.get_or_create(session_id=basket_id)
+        else:
+            basket, _ = Basket.objects.get_or_create(user=request.user)
+
+        queryset = BasketItems.objects.select_related('basket', 'product').filter(basket=basket)
         serializer = BasketItemSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         id = request.data['id']
         count = request.data['count']
-        user = request.user if not request.user.is_anonymous else User.objects.get_or_create(username='anonymous')[0]
-        basket, _ = Basket.objects.get_or_create(user=user)
-        product = Product.objects.only('id').get(id=id)
-        basket_item, _ = BasketItems.objects.get_or_create(basket=basket, product=product)
-        basket_item.quantity = count
-        basket_item.save()
-        items = BasketItems.objects.select_related('basket', 'product').filter(basket=basket)
-        serializer = BasketItemSerializer(items, many=True)
-        return Response(serializer.data)
+
+        # Для неавторизованных пользователей используем сессию
+        if request.user.is_anonymous:
+            basket_id = request.session.get('basket_id')
+            if not basket_id:
+                basket_id = str(uuid.uuid4())  # Генерируем уникальный ID корзины
+                request.session['basket_id'] = basket_id
+            basket, _ = Basket.objects.get_or_create(session_id=basket_id)
+        else:
+            basket, _ = Basket.objects.get_or_create(user=request.user)
+
+        try:
+            product = Product.objects.only('id').get(id=id)
+            basket_item, _ = BasketItems.objects.get_or_create(basket=basket, product=product)
+            basket_item.quantity = count
+            basket_item.save()
+
+            items = BasketItems.objects.select_related('basket', 'product').filter(basket=basket)
+            serializer = BasketItemSerializer(items, many=True)
+            return Response(serializer.data)
+        except Product.DoesNotExist:
+            return Response('Продукт не найден', status=404)
 
     def delete(self, request):
         id = request.data['id']
         count = request.data['count']
+
+        # Для неавторизованных пользователей используем сессию
+        if request.user.is_anonymous:
+            basket_id = request.session.get('basket_id')
+            if not basket_id:
+                basket_id = str(uuid.uuid4())  # Генерируем уникальный ID корзины
+                request.session['basket_id'] = basket_id
+            basket, _ = Basket.objects.get_or_create(session_id=basket_id)
+        else:
+            basket, _ = Basket.objects.get_or_create(user=request.user)
+
         try:
-            user = request.user if not request.user.is_anonymous else User.objects.get_or_create(username='anonymous')[0]
-            basket = Basket.objects.get(user=user)
             product = Product.objects.only('id').get(id=id)
             basket_item = BasketItems.objects.get(basket=basket, product=product)
 
@@ -172,24 +218,48 @@ class BasketApiView(APIView):
             return Response('Товар не найден в корзине', status=404)
 
 
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from .models import Basket, BasketItems, Order, DeliveryCost, Product
+
 class CreateOrderApiView(APIView):
     def post(self, request):
         try:
-            basket = request.user.basket
-            basket_items = BasketItems.objects.select_related('product').filter(basket__user=request.user)
+            # Для анонимных пользователей используем сессию
+            if request.user.is_anonymous:
+                basket_id = request.session.get('basket_id')
+                if not basket_id:
+                    basket_id = str(uuid.uuid4())  # Генерация уникального ID для корзины
+                    request.session['basket_id'] = basket_id
+                basket = Basket.objects.get(session_id=basket_id)
+            else:
+                basket = Basket.objects.get(user=request.user)
+
+            basket_items = BasketItems.objects.select_related('product').filter(basket=basket)
             total_cost = 0
-            order = Order.objects.create(fullName=request.user.username, basket=basket)
+            order = Order.objects.create(fullName=request.user.username if not request.user.is_anonymous else 'Guest', basket=basket)
+
+            # Рассчитываем общую стоимость заказа
             for item in basket_items:
                 product = item.product
                 product.count = item.quantity
                 total_cost += product.price * item.quantity
                 product.save()
+
+            # Рассчитываем стоимость доставки
             delivery_price = DeliveryCost.objects.only('delivery_cost', 'delivery_free_min').get(id=1)
             order.totalCost = total_cost if total_cost > delivery_price.delivery_free_min else total_cost + delivery_price.delivery_cost
             order.save()
+
             return JsonResponse({'orderId': order.pk})
+
         except Basket.DoesNotExist:
-            return JsonResponse({'error': 'У данного пользователя ничего в корзине нет'})
+            return JsonResponse({'error': 'У данного пользователя ничего в корзине нет'}, status=400)
+        except Product.DoesNotExist:
+            return JsonResponse({'error': 'Один из продуктов не найден'}, status=400)
+        except DeliveryCost.DoesNotExist:
+            return JsonResponse({'error': 'Не найдена стоимость доставки'}, status=400)
+
 
 
 class OrderDetailApiView(APIView):
