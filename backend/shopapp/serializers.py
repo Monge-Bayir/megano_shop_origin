@@ -50,15 +50,11 @@ class SpecificationSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    author = serializers.SerializerMethodField()
-    date = serializers.DateTimeField(format='%Y-%m-%d %H:%M')  # формат даты
+    author = serializers.CharField(source='author.fullName')  # Используем fullName из связанного Profile
 
     class Meta:
         model = Review
         fields = ['author', 'email', 'text', 'rate', 'date']
-
-    def get_author(self, obj):
-        return obj.author.fullName
 
 
 class ProductSaleSerializer(serializers.ModelSerializer):
@@ -71,7 +67,6 @@ class ProductSaleSerializer(serializers.ModelSerializer):
         fields = ['id', 'price', 'salePrice', 'dateFrom', 'dateTo', 'title', 'images']
 
     def get_images(self, obj):
-        # Используем метод модели get_image(), чтобы вернуть список изображений
         return obj.get_image()
 
     def get_dateFrom(self, obj):

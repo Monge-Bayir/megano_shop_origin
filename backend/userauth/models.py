@@ -18,6 +18,9 @@ class Profile(models.Model):
         upload_to=upload_avatar_path
     )
 
+    def __str__(self):
+        return self.fullName
+
     def get_avatar(self):
         avatar = {
             'src': self.avatar.url,
