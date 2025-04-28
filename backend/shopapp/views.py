@@ -198,6 +198,11 @@ class BasketApiView(APIView):
 
 
 class CreateOrderApiView(APIView):
+    def get(self, request):
+        orders = Order.objects.all()
+        serializer = OrderSerializers(orders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     def post(self, request):
         try:
             if request.user.is_anonymous:
