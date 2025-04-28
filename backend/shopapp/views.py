@@ -15,11 +15,11 @@ from .models import (
 )
 from .serializers import (
     BannerListSerializer, ProductSerializer, BasketItemSerializer,
-    OrderSerializers, TagSerializer, ReviewSerializer
+    OrderSerializers, TagSerializer, ReviewSerializer, ProductSaleSerializer
 )
 from userauth.models import Profile
 
-##
+
 class CategoryView(GenericAPIView):
     def get(self, request):
         categories = Category.objects.prefetch_related('subcategory_set').all()
@@ -291,11 +291,10 @@ class ProductSaleAPIView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
-
 class ReviewCreateAPIView(APIView):
-    def get(self, request, product_id):
+    def get(self, request, id):
         try:
-            product = Product.objects.only('id').get(pk=product_id)
+            product = Product.objects.only('id').get(pk=id)
         except Product.DoesNotExist:
             return Response({'detail': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -312,6 +311,7 @@ class ReviewCreateAPIView(APIView):
         serializer = ReviewSerializer(data=request.data)
         if serializer.is_valid():
             profile, _ = Profile.objects.get_or_create(fullName=serializer.validated_data['author'])
+
             Review.objects.create(
                 author=profile,
                 email=serializer.validated_data['email'],
@@ -321,6 +321,7 @@ class ReviewCreateAPIView(APIView):
             )
             return Response({'detail': 'Review created'}, status=status.HTTP_201_CREATED)
         return Response({'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class PaymentApiView(APIView):

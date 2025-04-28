@@ -50,10 +50,36 @@ class SpecificationSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    author = serializers.StringRelatedField()  # если хочешь выводить имя юзера
+    author = serializers.SerializerMethodField()
+    date = serializers.DateTimeField(format='%Y-%m-%d %H:%M')  # формат даты
+
     class Meta:
         model = Review
         fields = ['author', 'email', 'text', 'rate', 'date']
+
+    def get_author(self, obj):
+        return obj.author.fullName
+
+
+class ProductSaleSerializer(serializers.ModelSerializer):
+    images = serializers.SerializerMethodField()
+    dateFrom = serializers.SerializerMethodField()
+    dateTo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ['id', 'price', 'salePrice', 'dateFrom', 'dateTo', 'title', 'images']
+
+    def get_images(self, obj):
+        # Используем метод модели get_image(), чтобы вернуть список изображений
+        return obj.get_image()
+
+    def get_dateFrom(self, obj):
+        return obj.dateFrom.strftime('%m-%d') if obj.dateFrom else None
+
+    def get_dateTo(self, obj):
+        return obj.dateTo.strftime('%m-%d') if obj.dateTo else None
+
 
 
 class ProductSerializer(serializers.ModelSerializer):
