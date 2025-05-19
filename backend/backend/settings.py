@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'frontend',
     'userauth.apps.ApiConfig',
-    'shopapp.apps.ShopappConfig'
+    'shopapp.apps.ShopappConfig',
+    'django_cleanup.apps.CleanupConfig'
 ]
 
 MIDDLEWARE = [

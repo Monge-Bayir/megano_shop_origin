@@ -1,4 +1,8 @@
 asgiref==3.8.1
+diploma-frontend @ file:///Users/arinakamardina/python_django_diploma/diploma-frontend/dist/diploma-frontend-0.6.tar.gz#sha256=3a6b1203724b256946919b4d65b362b005ae6a9e1e93d8d765e96aa6a92764ac
 Django==5.2
-pillow==11.1.0
+django-cleanup==9.0.0
+djangorestframework==3.16.0
+pillow==11.2.1
+setuptools==78.1.0
 sqlparse==0.5.3
